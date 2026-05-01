@@ -27,16 +27,20 @@ export function speak(text, options = {}, onEnd = null) {
   const voices = window.speechSynthesis.getVoices();
   const preferred = voices.find(
     (v) =>
-      v.name.includes("Google") ||
       v.name.includes("Natural") ||
-      v.name.includes("Samantha")
+      v.name.includes("Aria") ||
+      v.name.includes("Google US English") ||
+      v.name.includes("Google UK English Female") ||
+      v.name.includes("Samantha") ||
+      v.name.includes("Jenny")
   );
   if (preferred) {
     utterance.voice = preferred;
   } else if (voices.length > 0) {
-    // Pick the first English voice
-    const english = voices.find((v) => v.lang.startsWith("en"));
-    if (english) utterance.voice = english;
+    // Pick the first English voice that is female if possible
+    const englishVoices = voices.filter((v) => v.lang.startsWith("en"));
+    const female = englishVoices.find((v) => v.name.includes("Female") || v.name.includes("Zira"));
+    utterance.voice = female || englishVoices[0];
   }
 
   if (onEnd) {

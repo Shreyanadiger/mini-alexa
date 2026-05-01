@@ -31,7 +31,6 @@ function App() {
     stop,
     setVoiceState,
     clearTranscript,
-    startWakeWordListening,
     isSupported,
   } = useVoiceRecognition();
 
@@ -77,16 +76,16 @@ function App() {
       if (response) {
         setVoiceState(VOICE_STATES.SPEAKING);
         speak(response, {}, () => {
-          // Done speaking — go back to wake word listening
-          setVoiceState(VOICE_STATES.WAKE_LISTENING);
-          startWakeWordListening();
+          // Done speaking — go back to idle
+          setVoiceState(VOICE_STATES.IDLE);
+          setIsActive(false);
         });
       } else {
-        setVoiceState(VOICE_STATES.WAKE_LISTENING);
-        startWakeWordListening();
+        setVoiceState(VOICE_STATES.IDLE);
+        setIsActive(false);
       }
     },
-    [sendMessage, setVoiceState, startWakeWordListening]
+    [sendMessage, setVoiceState]
   );
 
   /**
@@ -119,20 +118,19 @@ function App() {
     if (response) {
       setVoiceState(VOICE_STATES.SPEAKING);
       speak(response, {}, () => {
-        if (isActive) {
-          setVoiceState(VOICE_STATES.WAKE_LISTENING);
-          startWakeWordListening();
-        } else {
-          setVoiceState(VOICE_STATES.IDLE);
-        }
+        setVoiceState(VOICE_STATES.IDLE);
+        setIsActive(false);
       });
     } else {
-      setVoiceState(isActive ? VOICE_STATES.WAKE_LISTENING : VOICE_STATES.IDLE);
+      setVoiceState(VOICE_STATES.IDLE);
+      setIsActive(false);
     }
   };
 
+  const isAwake = state !== VOICE_STATES.IDLE && state !== VOICE_STATES.WAKE_LISTENING && state !== VOICE_STATES.ERROR;
+
   return (
-    <div className="app">
+    <div className={`app ${isAwake ? 'awake' : 'asleep'}`}>
       {/* Header */}
       <header className="app-header">
         <h1 className="app-title">Mini Alexa</h1>
@@ -143,14 +141,22 @@ function App() {
       <section className="app-center">
         <VoiceOrb state={state} onClick={handleOrbClick} />
         <StatusBanner state={state} transcript={transcript} />
+        
+        {/* Live Transcript Display */}
+        {state === VOICE_STATES.COMMAND_LISTENING && transcript && (
+          <div className="live-transcript">
+            {transcript}
+          </div>
+        )}
+
         {!isSupported && (
-          <p style={{ color: "var(--status-error)", fontSize: "0.85rem" }}>
+          <p style={{ color: "var(--status-error)", fontSize: "0.85rem", marginTop: "1rem" }}>
             ⚠️ Speech recognition is not supported in this browser. Use Chrome
             or Edge.
           </p>
         )}
         {error && (
-          <p style={{ color: "var(--status-error)", fontSize: "0.85rem" }}>
+          <p style={{ color: "var(--status-error)", fontSize: "0.85rem", marginTop: "1rem" }}>
             {error}
           </p>
         )}

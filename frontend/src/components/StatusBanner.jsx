@@ -8,11 +8,11 @@ import { VOICE_STATES } from "../hooks/useVoiceRecognition";
 export default function StatusBanner({ state, transcript }) {
   const getStatusInfo = () => {
     switch (state) {
-      case VOICE_STATES.WAKE_LISTENING:
-        return { text: 'Say "Mini Alexa" to start...', cssState: "idle" };
+      case VOICE_STATES.IDLE:
+        return { text: "Click the orb to speak", cssState: "idle" };
       case VOICE_STATES.COMMAND_LISTENING:
         return {
-          text: transcript ? `"${transcript}"` : "Listening... speak now!",
+          text: transcript ? `Listening...` : "Listening... speak now!",
           cssState: "listening",
         };
       case VOICE_STATES.THINKING:
@@ -22,7 +22,7 @@ export default function StatusBanner({ state, transcript }) {
       case VOICE_STATES.ERROR:
         return { text: "Microphone error — click the orb to retry", cssState: "error" };
       default:
-        return { text: "Click the orb to start", cssState: "idle" };
+        return { text: "Click the orb to speak", cssState: "idle" };
     }
   };
 

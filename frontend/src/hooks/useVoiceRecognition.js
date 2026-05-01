@@ -135,6 +135,7 @@ export function useVoiceRecognition() {
 
     recognitionRef.current = recognition;
     let commandText = "";
+    let silenceTimer = null;
 
     recognition.onresult = (event) => {
       let full = "";
@@ -143,32 +144,38 @@ export function useVoiceRecognition() {
       }
       commandText = full.trim();
       setTranscript(commandText);
+
+      // Reset the silence timer every time a new word is spoken
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (_) {}
+      }, 4000); // 4 seconds of silence means they are done
     };
 
-    // Auto-stop after 5 seconds of silence
     recognition.onspeechend = () => {
-      clearTimeout(commandTimeoutRef.current);
-      commandTimeoutRef.current = setTimeout(() => {
-        recognition.stop();
-      }, 1500);
+      // Let the silence timer handle stopping, don't force stop here
     };
 
     recognition.onerror = (event) => {
       console.error("[Command Error]", event.error);
       if (event.error !== "aborted") {
-        setState(VOICE_STATES.WAKE_LISTENING);
-        setTimeout(() => startWakeWordListening(), 500);
+        setState(VOICE_STATES.IDLE);
+        isListeningRef.current = false;
       }
     };
 
     recognition.onend = () => {
       clearTimeout(commandTimeoutRef.current);
+      clearTimeout(silenceTimer);
       if (commandText) {
         setTranscript(commandText);
         // The component using this hook will handle the next step
       } else {
-        // No command captured, go back to wake word
-        startWakeWordListening();
+        // No command captured
+        setState(VOICE_STATES.IDLE);
+        isListeningRef.current = false;
       }
     };
 
@@ -178,25 +185,26 @@ export function useVoiceRecognition() {
       recognition.start();
     } catch (e) {
       console.error("[Command Start Error]", e);
-      startWakeWordListening();
+      setState(VOICE_STATES.IDLE);
+      isListeningRef.current = false;
     }
 
-    // Safety timeout — stop after 10 seconds max
+    // Ultimate safety timeout — stop after 60 seconds max
     commandTimeoutRef.current = setTimeout(() => {
       try {
         recognition.stop();
       } catch (_) {}
-    }, 10000);
-  }, [createRecognition, startWakeWordListening]);
+    }, 60000);
+  }, [createRecognition]);
 
   /**
-   * Start the full voice flow (wake word → command).
+   * Start the full voice flow (no wake word, direct to command).
    */
   const start = useCallback(() => {
     isListeningRef.current = true;
     setError(null);
-    startWakeWordListening();
-  }, [startWakeWordListening]);
+    startCommandListening();
+  }, [startCommandListening]);
 
   /**
    * Stop all recognition.
@@ -247,7 +255,6 @@ export function useVoiceRecognition() {
     stop,
     setVoiceState,
     clearTranscript,
-    startWakeWordListening,
     isSupported: !!SpeechRecognition,
   };
 }
